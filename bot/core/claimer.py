@@ -1,9 +1,9 @@
 import asyncio
-from time import time
-from datetime import datetime
+from time import time, strftime, localtime
 from urllib.parse import unquote
+from typing import Any, Dict
 
-import aiohttp
+import aiohttp, random
 from aiohttp_proxy import ProxyConnector
 from better_proxy import Proxy
 from pyrogram import Client
@@ -14,7 +14,6 @@ from bot.config import settings
 from bot.utils import logger
 from bot.exceptions import InvalidSession
 from .headers import headers
-
 
 class Claimer:
 	def __init__(self, tg_client: Client):
@@ -42,19 +41,16 @@ class Claimer:
 					await self.tg_client.connect()
 				except (Unauthorized, UserDeactivated, AuthKeyUnregistered):
 					raise InvalidSession(self.session_name)
-
 			web_view = await self.tg_client.invoke(RequestWebView(
-				peer=await self.tg_client.resolve_peer('pocketfi_bot'),
-				bot=await self.tg_client.resolve_peer('pocketfi_bot'),
+				peer=await self.tg_client.resolve_peer('MMproBump_bot'),
+				bot=await self.tg_client.resolve_peer('MMproBump_bot'),
 				platform='android',
 				from_bot_menu=False,
-				url='https://botui.pocketfi.org/mining/'
+				url='https://api.mmbump.pro/'
 			))
-
 			auth_url = web_view.url
 			tg_web_data = unquote(
 				string=auth_url.split('tgWebAppData=', maxsplit=1)[1].split('&tgWebAppVersion', maxsplit=1)[0])
-
 			if self.tg_client.is_connected:
 				await self.tg_client.disconnect()
 
@@ -67,29 +63,81 @@ class Claimer:
 			logger.error(f"{self.session_name} | Unknown error during Authorization: {error}")
 			await asyncio.sleep(delay=3)
 
-	async def get_mining_data(self, http_client: aiohttp.ClientSession) -> dict[str]:
+	async def login(self, http_client: aiohttp.ClientSession, init_data: str) -> str:
+		url = 'https://api.mmbump.pro/v1/login'
 		try:
-			response = await http_client.get('https://bot.pocketfi.org/mining/getUserMining')
+			await http_client.options(url)
+			json_data = {"initData": init_data}
+			response = await http_client.post(url, json=json_data)
 			response.raise_for_status()
-
 			response_json = await response.json()
-			mining_data = response_json['userMining']
+			token = response_json.get('token', '')
+			return token
+		except Exception as error:
+			logger.error(f"{self.session_name} | Unknown error when log in: {error}")
+			await asyncio.sleep(delay=3)
 
-			return mining_data
+	async def get_profile(self, http_client: aiohttp.ClientSession) -> Dict[str, Any]:
+		url = 'https://api.mmbump.pro/v1/farming'
+		try:
+			await http_client.options(url)
+			response = await http_client.get(url)
+			response.raise_for_status()
+			response_json = await response.json()
+			return response_json
 		except Exception as error:
 			logger.error(f"{self.session_name} | Unknown error when getting Profile Data: {error}")
 			await asyncio.sleep(delay=3)
+			return {}
 
-	async def send_claim(self, http_client: aiohttp.ClientSession) -> bool:
+	async def day_grant(self, http_client: aiohttp.ClientSession) -> bool:
+		url = 'https://api.mmbump.pro/v1/grant-day/claim'
 		try:
-			response = await http_client.post('https://bot.pocketfi.org/mining/claimMining', json={})
+			await http_client.options(url)
+			response = await http_client.post(url)
 			response.raise_for_status()
+			response_json = await response.json()
+			balance = response_json.get('balance', False)
+			if balance is not False:
+				self.balance = int(balance)
+				return True
+			else: return False
+		except Exception as error:
+			logger.error(f"{self.session_name} | Unknown error when getting daily grant: {error}")
+			await asyncio.sleep(delay=3)
+			return False
 
-			return True
+	async def send_claim(self, http_client: aiohttp.ClientSession, taps: int) -> bool:
+		url = 'https://api.mmbump.pro/v1/farming/finish'
+		try:
+			await http_client.options(url)
+			response = await http_client.post(url, json={"tapCount":taps})
+			response.raise_for_status()
+			response_json = await response.json()
+			balance = response_json.get('balance', False)
+			if balance is not False:
+				self.balance = int(balance)
+				return True
+			else: return False
 		except Exception as error:
 			logger.error(f"{self.session_name} | Unknown error when Claiming: {error}")
 			await asyncio.sleep(delay=3)
-
+			return False
+			
+	async def start_farming(self, http_client: aiohttp.ClientSession) -> bool:
+		url = 'https://api.mmbump.pro/v1/farming/start'
+		await asyncio.sleep(delay=6)
+		try:
+			await http_client.options(url)
+			response = await http_client.post(url, json={"status":"inProgress"})
+			response.raise_for_status()
+			response_json = await response.json()
+			status = response_json.get('status', False)
+			if status is False: return False
+			else: return True
+		except Exception as error:
+			logger.error(f"{self.session_name} | Unknown error when Start Farming: {error}")
+			await asyncio.sleep(delay=3)
 			return False
 
 	async def check_proxy(self, http_client: aiohttp.ClientSession, proxy: Proxy) -> None:
@@ -100,10 +148,29 @@ class Claimer:
 		except Exception as error:
 			logger.error(f"{self.session_name} | Proxy: {proxy} | Error: {error}")
 
+	async def check_daily_grant(self, start_time: int, cur_time: int, day: int) -> bool:
+		seconds = cur_time - start_time
+		days = seconds / 86400
+		next_grant_time = start_time + (days + 1) * 86400
+		if days > day:
+			logger.info(f"{self.session_name} | Daily grant available")
+			return True
+		else:
+			logger.info(f"{self.session_name} | Next daily grant: {strftime('%Y-%m-%d %H:%M:%S', localtime(next_grant_time))}")
+			return False
+			
+	async def calculate_taps(self, farm: int, boost: int | bool) -> int:
+		if isinstance(boost, int) and boost > 0:
+			full_farm = farm * boost
+		else:
+			full_farm = farm
+		
+		perc = random.randint(100, 200)
+		taps = int(full_farm * (perc / 100))
+		return taps
+
 	async def run(self, proxy: str | None) -> None:
 		access_token_created_time = 0
-		claim_time = 0
-
 		proxy_conn = ProxyConnector().from_url(proxy) if proxy else None
 
 		async with aiohttp.ClientSession(headers=headers, connector=proxy_conn) as http_client:
@@ -114,62 +181,64 @@ class Claimer:
 				try:
 					if time() - access_token_created_time >= 3600:
 						tg_web_data = await self.get_tg_web_data(proxy=proxy)
-
-						http_client.headers["telegramRawData"] = tg_web_data
-						headers["telegramRawData"] = tg_web_data
-
+						token = await self.login(http_client=http_client, init_data=tg_web_data)
+						http_client.headers["Authorization"] = token
+						headers["Authorization"] = token
 						access_token_created_time = time()
 
-						mining_data = await self.get_mining_data(http_client=http_client)
+					profile = await self.get_profile(http_client=http_client)
+					info = profile['info']
+					farm = info['farm']
+					boost = info.get('boost', False)
+					if boost: boost = int(boost[1:])
+					system_time = profile['system_time']
+					self.balance = profile['balance']
+					day_grant_first = profile['day_grant_first']
+					day_grant_day = profile['day_grant_day']
+					session = profile['session']
+					status = session['status']
+					if status == 'inProgress':
+						moon_time = session['moon_time']
+						
+					# Log current balance
+					logger.info(f"{self.session_name} | Balance: {self.balance}")
 
-						last_claim_time = datetime.fromtimestamp(
-							int(str(mining_data['dttmLastClaim'])[:-3])).strftime('%Y-%m-%d %H:%M:%S')
-						claim_deadline_time = datetime.fromtimestamp(
-							int(str(mining_data['dttmClaimDeadline'])[:-3])).strftime('%Y-%m-%d %H:%M:%S')
+					if await self.check_daily_grant(start_time=day_grant_first, cur_time=system_time, day=day_grant_day):
+						if await self.day_grant(http_client=http_client):
+							logger.success(f"{self.session_name} | Daily grant claimed.")
+						continue
+						
+					if status == 'await':
+						logger.info(f"{self.session_name} | Farm not active. Starting farming.")
+						if await self.start_farming(http_client=http_client):
+							logger.success(f"{self.session_name} | Farming started successfully.")
+					else:
+						time_elapsed = system_time - moon_time
+						time_to_wait = (6 * 3600) - time_elapsed
+						if time_to_wait > 0:
+							hours = time_to_wait // 3600
+							minutes = (time_to_wait % 3600) // 60
+							logger.info(f"{self.session_name} | Farming active. Waiting for {hours} hours and {minutes} minutes before claiming and restarting.")
+							await asyncio.sleep(time_to_wait)
+						
+						logger.info(f"{self.session_name} | Time to claim and restart farming.")
+						taps = await self.calculate_taps(farm=farm, boost=boost)
+						if await self.send_claim(http_client=http_client, taps=taps):
+							logger.success(f"{self.session_name} | Claim successful.")
+						if await self.start_farming(http_client=http_client):
+							logger.success(f"{self.session_name} | Farming restarted successfully.")
 
-						logger.info(f"{self.session_name} | Last claim time: {last_claim_time}")
-						logger.info(f"{self.session_name} | Claim deadline time: {claim_deadline_time}")
-
-					mining_data = await self.get_mining_data(http_client=http_client)
-
-					balance = mining_data['gotAmount']
-					available = mining_data['miningAmount']
-					speed = mining_data['speed']
-
-					logger.info(f"{self.session_name} | Balance: <c>{balance}</c> | "
-								f"Available: <e>{available}</e> | "
-								f"Speed: <m>{speed}</m>")
-
-					if time() - claim_time >= settings.SLEEP_BETWEEN_CLAIM * 60 and available > 0:
-						retry = 0
-						while retry <= settings.CLAIM_RETRY:
-							status = await self.send_claim(http_client=http_client)
-							if status:
-								mining_data = await self.get_mining_data(http_client=http_client)
-
-								balance = mining_data['gotAmount']
-
-								logger.success(f"{self.session_name} | Successful claim | "
-											   f"Balance: <c>{balance}</c> (<g>+{available}</g>)")
-								logger.info(f"Next claim in {settings.SLEEP_BETWEEN_CLAIM}min")
-
-								claim_time = time()
-								break
-
-							logger.info(f"{self.session_name} | Retry <y>{retry}</y> of <e>{settings.CLAIM_RETRY}</e>")
-							retry += 1
-
+					# Log current balance
+					logger.info(f"{self.session_name} | Balance: {self.balance}")
+					
 				except InvalidSession as error:
 					raise error
-
 				except Exception as error:
 					logger.error(f"{self.session_name} | Unknown error: {error}")
 					await asyncio.sleep(delay=3)
-
 				else:
-					logger.info(f"Sleep 1min")
+					logger.info(f"Sleep 1 min")
 					await asyncio.sleep(delay=60)
-
 
 async def run_claimer(tg_client: Client, proxy: str | None):
 	try:
