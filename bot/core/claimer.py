@@ -151,11 +151,11 @@ class Claimer:
 	async def check_daily_grant(self, start_time: int, cur_time: int, day: int) -> bool:
 		seconds = cur_time - start_time
 		days = seconds / 86400
-		next_grant_time = start_time + (days + 1) * 86400
 		if days > day:
 			logger.info(f"{self.session_name} | Daily grant available")
 			return True
 		else:
+			next_grant_time = start_time + (day * 86400)
 			logger.info(f"{self.session_name} | Next daily grant: {strftime('%Y-%m-%d %H:%M:%S', localtime(next_grant_time))}")
 			return False
 			
