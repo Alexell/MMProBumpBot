@@ -1,62 +1,56 @@
-[<img src="https://img.shields.io/badge/Telegram-%40Me-orange">](https://t.me/sho6ot)
-
+# Bot for [MMPro Bump](https://alexell.ru/cc/mmpro)
 
 ![img1](.github/images/demo.png)
 
 > 🇷🇺 README на русском доступен [здесь](README.md)
 
 ## Functionality
-| Functional                                                     | Supported |
-|----------------------------------------------------------------|:---------:|
+| Feature                                                        | Supported  |
+|----------------------------------------------------------------|:----------:|
 | Multithreading                                                 |     ✅     |
 | Binding a proxy to a session                                   |     ✅     |
-| Auto-purchase of items if you have coins (tap, energy, charge) |     ✅     |
-| Random sleep time between clicks                               |     ✅     |
-| Random number of clicks per request                            |     ✅     |
-| Support tdata / pyrogram .session / telethon .session          |     ✅     |
+| Auto-claim daily grant                                         |     ✅     |
+| Automatic farming                                              |     ✅     |
+| Automatic taps that account for enabled boosts                 |     ✅     |
+| Support tdata and pyrogram .session                            |     ✅     |
 
-## [Settings](https://github.com/shamhi/PocketFiBot/blob/main/.env-example)
-| Настройка               | Описание                                                                   |
+## [Options](https://github.com/Alexell/MMProBumpBot/blob/main/.env-example)
+| Option                  | Description                                                                   |
 |-------------------------|----------------------------------------------------------------------------|
 | **API_ID / API_HASH**   | Platform data from which to launch a Telegram session (stock - Android)    |
-| **CLAIM_RETRY**         | Number of tryings if **Claim** is unsuccessful _(eg 3)_                    |
-| **SLEEP_BETWEEN_CLAIM** | Delay between **Claim** in minutes _(eg 180)_                              |
 | **USE_PROXY_FROM_FILE** | Whether to use proxy from the `bot/config/proxies.txt` file (True / False) |
 
 ## Installation
-You can download [**Repository**](https://github.com/shamhi/PocketFiBot) by cloning it to your system and installing the necessary dependencies:
+**Use Python 3.10!**
+
+You can download [**Repository**](https://github.com/Alexell/MMProBumpBot) by cloning it to your system and installing the necessary dependencies:
 ```shell
-~ >>> git clone https://github.com/shamhi/PocketFiBot.git
-~ >>> cd PocketFiBot
+~ >>> git clone https://github.com/Alexell/MMProBumpBot.git
+~ >>> cd MMProBumpBot
 
-# If you are using Telethon sessions, then clone the "converter" branch
-~ >>> git clone https://github.com/shamhi/PocketFiBot.git -b converter
-~ >>> cd PocketFiBot
+# Linux
+~/MMProBumpBot >>> python3 -m venv venv
+~/MMProBumpBot >>> source venv/bin/activate
+~/MMProBumpBot >>> pip3 install -r requirements.txt
+~/MMProBumpBot >>> cp .env-example .env
+~/MMProBumpBot >>> nano .env # specify your API_ID and API_HASH, the rest is taken by default
+~/MMProBumpBot >>> python3 main.py
 
-#Linux
-~/PocketFiBot >>> python3 -m venv venv
-~/PocketFiBot >>> source venv/bin/activate
-~/PocketFiBot >>> pip3 install -r requirements.txt
-~/PocketFiBot >>> cp .env-example .env
-~/PocketFiBot >>> nano .env # Here you must specify your API_ID and API_HASH , the rest is taken by default
-~/PocketFiBot >>> python3 main.py
-
-#Windows
-~/PocketFiBot >>> python -m venv venv
-~/PocketFiBot >>> venv\Scripts\activate
-~/PocketFiBot >>> pip install -r requirements.txt
-~/PocketFiBot >>> copy .env-example .env
-~/PocketFiBot >>> # Specify your API_ID and API_HASH, the rest is taken by default
-~/PocketFiBot >>> python main.py
+# Windows
+~/MMProBumpBot >>> python -m venv venv
+~/MMProBumpBot >>> venv\Scripts\activate
+~/MMProBumpBot >>> pip install -r requirements.txt
+~/MMProBumpBot >>> copy .env-example .env
+~/MMProBumpBot >>> # specify your API_ID and API_HASH, the rest is taken by default
+~/MMProBumpBot >>> python main.py
 ```
 
 Also for quick launch you can use arguments, for example:
 ```shell
-~/PocketFiBot >>> python3 main.py --action (1/2)
+~/MMProBumpBot >>> python3 main.py --action (1/2)
 # Or
-~/PocketFiBot >>> python3 main.py -a (1/2)
+~/MMProBumpBot >>> python3 main.py -a (1/2)
 
-#1 - Create session
-#2 - Run clicker
-#3 - Run via Telegram
+# 1 - Create session
+# 2 - Run bot
 ```
