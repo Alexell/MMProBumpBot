@@ -148,7 +148,11 @@ class Claimer:
 		except Exception as error:
 			logger.error(f"{self.session_name} | Proxy: {proxy} | Error: {error}")
 
-	async def check_daily_grant(self, start_time: int, cur_time: int, day: int) -> bool:
+	async def check_daily_grant(self, start_time: int | None, cur_time: int, day: int | None) -> bool:
+		if start_time is None and day is None:
+			logger.info(f"{self.session_name} | First daily grant available")
+			return True
+		
 		seconds = cur_time - start_time
 		days = seconds / 86400
 		if days > day:
@@ -193,8 +197,8 @@ class Claimer:
 					if boost: boost = int(boost[1:])
 					system_time = profile['system_time']
 					self.balance = profile['balance']
-					day_grant_first = profile['day_grant_first']
-					day_grant_day = profile['day_grant_day']
+					day_grant_first = profile.get('day_grant_first', None)
+					day_grant_day = profile.get('day_grant_day', None)
 					session = profile['session']
 					status = session['status']
 					if status == 'inProgress':
