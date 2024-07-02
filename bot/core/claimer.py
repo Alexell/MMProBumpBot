@@ -227,6 +227,8 @@ class Claimer:
 								hours = daily_grant_wait // 3600
 								minutes = (daily_grant_wait % 3600) // 60
 								logger.info(f"{self.session_name} | Farming active. Waiting for {hours} hours and {minutes} minutes before claiming daily grant.")
+								await asyncio.sleep(daily_grant_wait)
+								continue
 							else:
 								hours = claim_wait // 3600
 								minutes = (claim_wait % 3600) // 60
