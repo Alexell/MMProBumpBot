@@ -148,20 +148,21 @@ class Claimer:
 		except Exception as error:
 			logger.error(f"{self.session_name} | Proxy: {proxy} | Error: {error}")
 
-	async def check_daily_grant(self, start_time: int | None, cur_time: int, day: int | None) -> bool:
+	async def check_daily_grant(self, start_time: int | None, cur_time: int, day: int | None) -> tuple[bool, int]:
 		if start_time is None and day is None:
 			logger.info(f"{self.session_name} | First daily grant available")
-			return True
+			return True, 0
 		
 		seconds = cur_time - start_time
 		days = seconds / 86400
 		if days > day:
 			logger.info(f"{self.session_name} | Daily grant available")
-			return True
+			return True, 0
 		else:
 			next_grant_time = start_time + (day * 86400)
+			time_to_wait = next_grant_time - cur_time
 			logger.info(f"{self.session_name} | Next daily grant: {strftime('%Y-%m-%d %H:%M:%S', localtime(next_grant_time))}")
-			return False
+			return False, time_to_wait
 			
 	async def calculate_taps(self, farm: int, boost: int | bool) -> int:
 		if isinstance(boost, int) and boost > 0:
@@ -207,7 +208,8 @@ class Claimer:
 					# Log current balance
 					logger.info(f"{self.session_name} | Balance: {self.balance}")
 
-					if await self.check_daily_grant(start_time=day_grant_first, cur_time=system_time, day=day_grant_day):
+					daily_grant_awail, daily_grant_wait = await self.check_daily_grant(start_time=day_grant_first, cur_time=system_time, day=day_grant_day)
+					if daily_grant_awail:
 						if await self.day_grant(http_client=http_client):
 							logger.success(f"{self.session_name} | Daily grant claimed.")
 						continue
@@ -216,14 +218,20 @@ class Claimer:
 						logger.info(f"{self.session_name} | Farm not active. Starting farming.")
 						if await self.start_farming(http_client=http_client):
 							logger.success(f"{self.session_name} | Farming started successfully.")
+						continue
 					else:
 						time_elapsed = system_time - moon_time
-						time_to_wait = (6 * 3600) - time_elapsed
-						if time_to_wait > 0:
-							hours = time_to_wait // 3600
-							minutes = (time_to_wait % 3600) // 60
-							logger.info(f"{self.session_name} | Farming active. Waiting for {hours} hours and {minutes} minutes before claiming and restarting.")
-							await asyncio.sleep(time_to_wait)
+						claim_wait = (6 * 3600) - time_elapsed
+						if claim_wait > 0:
+							if daily_grant_wait > 0 and daily_grant_wait < claim_wait:
+								hours = daily_grant_wait // 3600
+								minutes = (daily_grant_wait % 3600) // 60
+								logger.info(f"{self.session_name} | Farming active. Waiting for {hours} hours and {minutes} minutes before claiming daily grant.")
+							else:
+								hours = claim_wait // 3600
+								minutes = (claim_wait % 3600) // 60
+								logger.info(f"{self.session_name} | Farming active. Waiting for {hours} hours and {minutes} minutes before claiming and restarting.")
+								await asyncio.sleep(claim_wait)
 						
 						logger.info(f"{self.session_name} | Time to claim and restart farming.")
 						taps = await self.calculate_taps(farm=farm, boost=boost)
