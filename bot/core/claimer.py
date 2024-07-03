@@ -203,7 +203,7 @@ class Claimer:
 					session = profile['session']
 					status = session['status']
 					if status == 'inProgress':
-						moon_time = session['moon_time']
+						start_time = session['start_at']
 						
 					# Log current balance
 					logger.info(f"{self.session_name} | Balance: {self.balance}")
@@ -220,7 +220,7 @@ class Claimer:
 							logger.success(f"{self.session_name} | Farming started successfully.")
 						continue
 					else:
-						time_elapsed = system_time - moon_time
+						time_elapsed = system_time - start_time
 						claim_wait = (6 * 3600) - time_elapsed
 						if claim_wait > 0:
 							if daily_grant_wait > 0 and daily_grant_wait < claim_wait:
