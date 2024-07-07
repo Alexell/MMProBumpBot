@@ -33,7 +33,7 @@
 2. Выполните установку: `chmod +x INSTALL.sh START.sh && ./INSTALL.sh`, затем укажите ваши API_ID и API_HASH в .env
 3. Используйте `./START.sh` для запуска бота (или в консоли: `python3 main.py`)
 
-## Docker
+## Запуск в Docker
 ```shell
 ~ >>> git clone https://github.com/Alexell/MMProBumpBot.git
 ~ >>> cd MMProBumpBot

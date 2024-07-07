@@ -33,7 +33,7 @@ You can obtain the **API_ID** and **API_HASH** after creating an application at 
 2. Run the installation: `chmod +x INSTALL.sh START.sh && ./INSTALL.sh`, then specify your API_ID and API_HASH in the .env file.
 3. Use `./START.sh` to run the bot (or in the console: `python3 main.py`).
 
-## Docker
+## Running in Docker
 ```shell
 ~ >>> git clone https://github.com/Alexell/MMProBumpBot.git
 ~ >>> cd MMProBumpBot

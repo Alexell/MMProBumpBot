@@ -63,12 +63,12 @@ class Claimer:
 			logger.error(f"{self.session_name} | Unknown error during Authorization: {error}")
 			await asyncio.sleep(delay=3)
 
-	async def login(self, http_client: aiohttp.ClientSession, init_data: str) -> str:
+	async def login(self, init_data: str) -> str:
 		url = 'https://api.mmbump.pro/v1/login'
 		try:
-			await http_client.options(url)
+			await self.http_client.options(url)
 			json_data = {"initData": init_data}
-			response = await http_client.post(url, json=json_data)
+			response = await self.http_client.post(url, json=json_data)
 			response.raise_for_status()
 			response_json = await response.json()
 			token = response_json.get('token', '')
@@ -77,11 +77,11 @@ class Claimer:
 			logger.error(f"{self.session_name} | Unknown error when log in: {error}")
 			await asyncio.sleep(delay=3)
 
-	async def get_profile(self, http_client: aiohttp.ClientSession) -> Dict[str, Any]:
+	async def get_profile(self) -> Dict[str, Any]:
 		url = 'https://api.mmbump.pro/v1/farming'
 		try:
-			await http_client.options(url)
-			response = await http_client.get(url)
+			await self.http_client.options(url)
+			response = await self.http_client.get(url)
 			response.raise_for_status()
 			response_json = await response.json()
 			return response_json
@@ -90,11 +90,11 @@ class Claimer:
 			await asyncio.sleep(delay=3)
 			return {}
 
-	async def day_grant(self, http_client: aiohttp.ClientSession) -> bool:
+	async def daily_grant(self) -> bool:
 		url = 'https://api.mmbump.pro/v1/grant-day/claim'
 		try:
-			await http_client.options(url)
-			response = await http_client.post(url)
+			await self.http_client.options(url)
+			response = await self.http_client.post(url)
 			response.raise_for_status()
 			response_json = await response.json()
 			balance = response_json.get('balance', False)
@@ -107,11 +107,11 @@ class Claimer:
 			await asyncio.sleep(delay=3)
 			return False
 
-	async def send_claim(self, http_client: aiohttp.ClientSession, taps: int) -> bool:
+	async def send_claim(self, taps: int) -> bool:
 		url = 'https://api.mmbump.pro/v1/farming/finish'
 		try:
-			await http_client.options(url)
-			response = await http_client.post(url, json={"tapCount":taps})
+			await self.http_client.options(url)
+			response = await self.http_client.post(url, json={"tapCount":taps})
 			response.raise_for_status()
 			response_json = await response.json()
 			balance = response_json.get('balance', False)
@@ -124,12 +124,12 @@ class Claimer:
 			await asyncio.sleep(delay=3)
 			return False
 			
-	async def start_farming(self, http_client: aiohttp.ClientSession) -> bool:
+	async def start_farming(self) -> bool:
 		url = 'https://api.mmbump.pro/v1/farming/start'
 		await asyncio.sleep(delay=6)
 		try:
-			await http_client.options(url)
-			response = await http_client.post(url, json={"status":"inProgress"})
+			await self.http_client.options(url)
+			response = await self.http_client.post(url, json={"status":"inProgress"})
 			response.raise_for_status()
 			response_json = await response.json()
 			status = response_json.get('status', False)
@@ -140,9 +140,9 @@ class Claimer:
 			await asyncio.sleep(delay=3)
 			return False
 
-	async def check_proxy(self, http_client: aiohttp.ClientSession, proxy: Proxy) -> None:
+	async def check_proxy(self, proxy: Proxy) -> None:
 		try:
-			response = await http_client.get(url='https://httpbin.org/ip', timeout=aiohttp.ClientTimeout(5))
+			response = await self.http_client.get(url='https://httpbin.org/ip', timeout=aiohttp.ClientTimeout(5))
 			ip = (await response.json()).get('origin')
 			logger.info(f"{self.session_name} | Proxy IP: {ip}")
 		except Exception as error:
@@ -179,19 +179,20 @@ class Claimer:
 		proxy_conn = ProxyConnector().from_url(proxy) if proxy else None
 
 		async with aiohttp.ClientSession(headers=headers, connector=proxy_conn) as http_client:
+			self.http_client = http_client
 			if proxy:
-				await self.check_proxy(http_client=http_client, proxy=proxy)
+				await self.check_proxy(proxy=proxy)
 
 			while True:
 				try:
 					if time() - access_token_created_time >= 3600:
 						tg_web_data = await self.get_tg_web_data(proxy=proxy)
-						token = await self.login(http_client=http_client, init_data=tg_web_data)
-						http_client.headers["Authorization"] = token
+						token = await self.login(init_data=tg_web_data)
+						self.http_client.headers["Authorization"] = token
 						headers["Authorization"] = token
 						access_token_created_time = time()
 
-					profile = await self.get_profile(http_client=http_client)
+					profile = await self.get_profile()
 					info = profile['info']
 					farm = info['farm']
 					boost = info.get('boost', False)
@@ -210,13 +211,13 @@ class Claimer:
 
 					daily_grant_awail, daily_grant_wait = await self.check_daily_grant(start_time=day_grant_first, cur_time=system_time, day=day_grant_day)
 					if daily_grant_awail:
-						if await self.day_grant(http_client=http_client):
+						if await self.daily_grant():
 							logger.success(f"{self.session_name} | Daily grant claimed.")
 						continue
 						
 					if status == 'await':
 						logger.info(f"{self.session_name} | Farm not active. Starting farming.")
-						if await self.start_farming(http_client=http_client):
+						if await self.start_farming():
 							logger.success(f"{self.session_name} | Farming started successfully.")
 						continue
 					else:
@@ -237,9 +238,9 @@ class Claimer:
 						
 						logger.info(f"{self.session_name} | Time to claim and restart farming.")
 						taps = await self.calculate_taps(farm=farm, boost=boost)
-						if await self.send_claim(http_client=http_client, taps=taps):
+						if await self.send_claim(taps=taps):
 							logger.success(f"{self.session_name} | Claim successful.")
-						if await self.start_farming(http_client=http_client):
+						if await self.start_farming():
 							logger.success(f"{self.session_name} | Farming restarted successfully.")
 
 					# Log current balance
