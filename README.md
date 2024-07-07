@@ -1,40 +1,60 @@
-# Бот для [MMPro Bump](https://alexell.ru/cc/mmpro)
+# Bot for [MMPro Bump](https://alexell.ru/cc/mmpro)
 
 ![img1](.github/images/demo.png)
 
-> 🇺🇸 README in english available [here](README-EN.md)
+> 🇷🇺 README на русском доступен [здесь](README-RU.md)
 
-## Функционал
-| Функция                                                        | Поддерживается  |
-|----------------------------------------------------------------|:---------------:|
-| Многопоточность                                                |        ✅       |
-| Привязка прокси к сессии                                       |        ✅       |
-| Получение ежедневной награды                                   |        ✅       |
-| Автоматический фарминг                                         |        ✅       |
-| Автоматические тапы с учетом бустов                            |        ✅       |
-| Поддержка tdata и pyrogram .session                            |        ✅       |
+## Functionality
+| Feature                                                        | Supported  |
+|----------------------------------------------------------------|:----------:|
+| Multithreading                                                 |     ✅     |
+| Binding a proxy to a session                                   |     ✅     |
+| Auto-claim daily grant                                         |     ✅     |
+| Automatic farming                                              |     ✅     |
+| Automatic taps that account for enabled boosts                 |     ✅     |
+| Docker                                                         |     ✅     |
 
-## [Настройки](https://github.com/Alexell/MMProBumpBot/blob/main/.env-example)
-| Опция                   | Описание                                                                   |
+## [Options](https://github.com/Alexell/MMProBumpBot/blob/main/.env-example)
+| Option                  | Description                                                                   |
 |-------------------------|----------------------------------------------------------------------------|
-| **API_ID / API_HASH**   | Данные платформы, с которой запускать сессию Telegram (сток - Android)     |
-| **USE_PROXY_FROM_FILE** | Использовать-ли прокси из файла `bot/config/proxies.txt` (True / False)    |
+| **API_ID / API_HASH**   | Platform data from which to launch a Telegram session (stock - Android)    |
+| **USE_PROXY_FROM_FILE** | Whether to use proxy from the `bot/config/proxies.txt` file (True / False) |
 
-**API_ID** и **API_HASH** вы можете получить после создания приложения на [my.telegram.org/apps](https://my.telegram.org/apps)
+You can obtain the **API_ID** and **API_HASH** after creating an application at [my.telegram.org/apps](https://my.telegram.org/apps)
 
-## Быстрый старт
+## Quick start
 ### Windows
-1. Убедитесь, что у вас установлен **Python 3.10** или более новая версия.
-2. Используйте `INSTALL.bat` для установки, затем укажите ваши API_ID и API_HASH в .env
-3. Используйте `START.bat` для запуска бота (или в консоли: `python main.py`)
+1. Ensure you have **Python 3.10** or a newer version installed.
+2. Use `INSTALL.bat` to install, then specify your API_ID and API_HASH in the .env file.
+3. Use `START.bat` to launch the bot (or in the console: `python main.py`).
 
 ### Linux
-1. Клонируйте репозиторий: `git clone https://github.com/Alexell/MMProBumpBot.git && cd MMProBumpBot`
-2. Выполните установку: `chmod +x INSTALL.sh START.sh && ./INSTALL.sh`, затем укажите ваши API_ID и API_HASH в .env
-3. Используйте `./START.sh` для запуска бота (или в консоли: `python3 main.py`)
+1. Clone the repository: `git clone https://github.com/Alexell/MMProBumpBot.git && cd MMProBumpBot`
+2. Run the installation: `chmod +x INSTALL.sh START.sh && ./INSTALL.sh`, then specify your API_ID and API_HASH in the .env file.
+3. Use `./START.sh` to run the bot (or in the console: `python3 main.py`).
 
-## Ручная установка
-Вы можете скачать [**Репозиторий**](https://github.com/Alexell/MMProBumpBot) клонированием на вашу систему и установкой необходимых зависимостей:
+## Docker
+```shell
+~ >>> git clone https://github.com/Alexell/MMProBumpBot.git
+~ >>> cd MMProBumpBot
+~ >>> cp .env-example .env
+~ >>> nano .env # specify your API_ID and API_HASH, the rest can be left as default
+```
+### Docker Compose (recommended)
+```shell
+~ >>> docker-compose run bot -a 1 # first run for authorization (override arguments)
+~ >>> docker-compose start # start in background mode (default arguments: -a 2)
+```
+### Docker
+```shell
+~ >>> docker build -t mmpro_bump_bot .
+~ >>> docker run --name MMProBumpBot -v .:/app -it mmpro_bump_bot -a 1 # first run for authorization
+~ >>> docker rm MMProBumpBot # remove container to recreate with default arguments
+~ >>> docker run -d --restart unless-stopped --name MMProBumpBot -v .:/app mmpro_bump_bot # start in background mode (default arguments: -a 2)
+```
+
+## Manual installation
+You can download [**Repository**](https://github.com/Alexell/MMProBumpBot) by cloning it to your system and installing the necessary dependencies:
 ```shell
 ~ >>> git clone https://github.com/Alexell/MMProBumpBot.git
 ~ >>> cd MMProBumpBot
@@ -44,42 +64,42 @@
 ~/MMProBumpBot >>> source venv/bin/activate
 ~/MMProBumpBot >>> pip3 install -r requirements.txt
 ~/MMProBumpBot >>> cp .env-example .env
-~/MMProBumpBot >>> nano .env # укажите ваши API_ID и API_HASH, остальное можно оставить по умолчанию
+~/MMProBumpBot >>> nano .env # specify your API_ID and API_HASH, the rest can be left as default
 ~/MMProBumpBot >>> python3 main.py
 
-# Windows (сначала установите Python 3.10 или более новую версию)
+# Windows (first, install Python 3.10 or a newer version)
 ~/MMProBumpBot >>> python -m venv venv
 ~/MMProBumpBot >>> venv\Scripts\activate
 ~/MMProBumpBot >>> pip install -r requirements.txt
 ~/MMProBumpBot >>> copy .env-example .env
-~/MMProBumpBot >>> # укажите ваши API_ID и API_HASH, остальное можно оставить по умолчанию
+~/MMProBumpBot >>> # specify your API_ID and API_HASH, the rest can be left as default
 ~/MMProBumpBot >>> python main.py
 ```
 
-Также для быстрого запуска вы можете использовать аргументы:
+Also for quick launch you can use arguments:
 ```shell
 ~/MMProBumpBot >>> python3 main.py --action (1/2)
-# или
+# or
 ~/MMProBumpBot >>> python3 main.py -a (1/2)
 
-# 1 - создать сессию
-# 2 - запустить бот
+# 1 - Create session
+# 2 - Run bot
 ```
 
-## Запуск  бота в фоновом режиме (Linux)
+## Running a bot in the background (Linux)
 ```shell
 cd MMProBumpBot
 
-# с логированием
+# with logging
 setsid venv/bin/python3 main.py --action 2 >> app.log 2>&1 &
 
-# без логирования
+# without logging
 setsid venv/bin/python3 main.py --action 2 > /dev/null 2>&1 &
 
-# Теперь вы можете закрыть консоль и бот продолжит свою работу.
+# Now you can close the console, and the bot will continue its work.
 ```
 
-### Найти процесс бота
+### Find the bot process
 ```shell
 ps aux | grep "python3 main.py" | grep -v grep
 ```
