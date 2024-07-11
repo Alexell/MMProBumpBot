@@ -1,9 +1,9 @@
 import asyncio
 from time import time, strftime, localtime
-from urllib.parse import unquote
-from typing import Any, Dict
+from urllib.parse import quote, unquote
+from typing import Any, Dict, List
 
-import aiohttp, random
+import aiohttp, random, math, hashlib, hmac
 from aiohttp_proxy import ProxyConnector
 from better_proxy import Proxy
 from pyrogram import Client
@@ -19,6 +19,8 @@ class Claimer:
 	def __init__(self, tg_client: Client):
 		self.session_name = tg_client.name
 		self.tg_client = tg_client
+		self.user_id = None
+		self.api_url = 'https://api.mmbump.pro/v1'
 
 	async def get_tg_web_data(self, proxy: str | None) -> str:
 		if proxy:
@@ -39,6 +41,11 @@ class Claimer:
 			if not self.tg_client.is_connected:
 				try:
 					await self.tg_client.connect()
+					if self.user_id is None:
+						user = await self.tg_client.get_me()
+						self.user_id = user.id
+						self.http_client.headers["user_auth"] = str(self.user_id)
+						headers["user_auth"] = str(self.user_id)
 				except (Unauthorized, UserDeactivated, AuthKeyUnregistered):
 					raise InvalidSession(self.session_name)
 			web_view = await self.tg_client.invoke(RequestWebView(
@@ -64,24 +71,39 @@ class Claimer:
 			await asyncio.sleep(delay=3)
 
 	async def login(self, init_data: str) -> str:
-		url = 'https://api.mmbump.pro/v1/login'
+		url = self.api_url + '/loginJwt'
 		try:
 			await self.http_client.options(url)
 			json_data = {"initData": init_data}
 			response = await self.http_client.post(url, json=json_data)
 			response.raise_for_status()
 			response_json = await response.json()
-			token = response_json.get('token', '')
+			token = response_json.get('access_token', '')
 			return token
 		except Exception as error:
 			logger.error(f"{self.session_name} | Unknown error when log in: {error}")
 			await asyncio.sleep(delay=3)
+			return False
 
-	async def get_profile(self) -> Dict[str, Any]:
-		url = 'https://api.mmbump.pro/v1/farming'
+	async def refresh_token(self) -> str | bool:
+		url = self.api_url + '/auth/refresh'
 		try:
 			await self.http_client.options(url)
-			response = await self.http_client.get(url)
+			response = await self.http_client.post(url)
+			response.raise_for_status()
+			response_json = await response.json()
+			self.access_token = response_json.get('access', '')
+			return True if self.access_token != '' else False
+		except Exception as error:
+			logger.error(f"{self.session_name} | Unknown error when Refresh auth tokens: {error}")
+			await asyncio.sleep(delay=3)
+			return False
+
+	async def get_profile(self) -> Dict[str, Any]:
+		url = self.api_url + '/farming'
+		try:
+			await self.http_client.options(url)
+			response = await self.http_client.post(url)
 			response.raise_for_status()
 			response_json = await response.json()
 			return response_json
@@ -91,9 +113,12 @@ class Claimer:
 			return {}
 
 	async def daily_grant(self) -> bool:
-		url = 'https://api.mmbump.pro/v1/grant-day/claim'
+		url = self.api_url + '/grant-day/claim'
 		try:
-			await self.http_client.options(url)
+			json_data = {}
+			data_list = []
+			json_data["hash"] = await self.create_hash(data_list)
+			await self.http_client.options(url, json=json_data)
 			response = await self.http_client.post(url)
 			response.raise_for_status()
 			response_json = await response.json()
@@ -108,10 +133,13 @@ class Claimer:
 			return False
 
 	async def send_claim(self, taps: int) -> bool:
-		url = 'https://api.mmbump.pro/v1/farming/finish'
+		url = self.api_url + '/farming/finish'
 		try:
+			json_data = {"tapCount":taps}
+			data_list = [json_data]
+			json_data["hash"] = await self.create_hash(data_list)
 			await self.http_client.options(url)
-			response = await self.http_client.post(url, json={"tapCount":taps})
+			response = await self.http_client.post(url, json=json_data)
 			response.raise_for_status()
 			response_json = await response.json()
 			balance = response_json.get('balance', False)
@@ -125,11 +153,14 @@ class Claimer:
 			return False
 			
 	async def start_farming(self) -> bool:
-		url = 'https://api.mmbump.pro/v1/farming/start'
+		url = self.api_url + '/farming/start'
 		await asyncio.sleep(delay=6)
 		try:
+			json_data = {"status":"inProgress"}
+			data_list = [json_data]
+			json_data["hash"] = await self.create_hash(data_list)
 			await self.http_client.options(url)
-			response = await self.http_client.post(url, json={"status":"inProgress"})
+			response = await self.http_client.post(url, json=json_data)
 			response.raise_for_status()
 			response_json = await response.json()
 			status = response_json.get('status', False)
@@ -173,6 +204,20 @@ class Claimer:
 		perc = random.randint(100, 200)
 		taps = int(full_farm * (perc / 100))
 		return taps
+	
+	async def create_hash(self, data_list: List[Dict[str, Any]], secret_key: str = 'super-key') -> str:
+		params = []
+		for item in data_list:
+			for key, value in item.items():
+				params.append(f"{key}={quote(str(value))}")
+		
+		time_param = f"time={math.ceil(time() / 60)}"
+		if params:
+			complete_str = '&'.join(params + [time_param])
+		else:
+			complete_str = time_param
+		hashed = hmac.new(secret_key.encode(), complete_str.encode(), hashlib.sha256)
+		return hashed.hexdigest()
 
 	async def run(self, proxy: str | None) -> None:
 		access_token_created_time = 0
@@ -182,15 +227,30 @@ class Claimer:
 			self.http_client = http_client
 			if proxy:
 				await self.check_proxy(proxy=proxy)
-
+			
+			self.authorized = False
 			while True:
 				try:
-					if time() - access_token_created_time >= 3600:
+					if not self.authorized:
 						tg_web_data = await self.get_tg_web_data(proxy=proxy)
-						token = await self.login(init_data=tg_web_data)
-						self.http_client.headers["Authorization"] = token
-						headers["Authorization"] = token
-						access_token_created_time = time()
+						access_token = await self.login(init_data=tg_web_data)
+						if access_token is not False:
+							self.authorized = True
+							self.access_token = access_token
+							self.http_client.headers['Authorization'] = 'Bearer ' + access_token
+							headers['Authorization'] = 'Bearer ' + access_token
+							access_token_created_time = time()
+						else: continue
+					
+					if time() - access_token_created_time >= 3600:
+						refresh_success = await self.refresh_token()
+						if refresh_success:
+							self.http_client.headers['Authorization'] = 'Bearer ' + self.access_token
+							headers['Authorization'] = 'Bearer ' + self.access_token
+							access_token_created_time = time()
+						else:
+							self.authorized = False
+							continue
 
 					profile = await self.get_profile()
 					info = profile['info']
