@@ -6,6 +6,7 @@ class Settings(BaseSettings):
 
 	API_ID: int
 	API_HASH: str
+	ERRORS_BEFORE_STOP: int = 3
 	USE_PROXY_FROM_FILE: bool = False
 
 

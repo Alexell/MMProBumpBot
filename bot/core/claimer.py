@@ -21,6 +21,7 @@ class Claimer:
 		self.tg_client = tg_client
 		self.user_id = None
 		self.api_url = 'https://api.mmbump.pro/v1'
+		self.errors = 0
 
 	async def get_tg_web_data(self, proxy: str | None) -> str:
 		if proxy:
@@ -82,6 +83,7 @@ class Claimer:
 			return token
 		except Exception as error:
 			logger.error(f"{self.session_name} | Unknown error when log in: {error}")
+			self.errors += 1
 			await asyncio.sleep(delay=3)
 			return False
 
@@ -109,6 +111,7 @@ class Claimer:
 			return response_json
 		except Exception as error:
 			logger.error(f"{self.session_name} | Unknown error when getting Profile Data: {error}")
+			self.errors += 1
 			await asyncio.sleep(delay=3)
 			return {}
 
@@ -129,6 +132,7 @@ class Claimer:
 			else: return False
 		except Exception as error:
 			logger.error(f"{self.session_name} | Unknown error when getting daily grant: {error}")
+			self.errors += 1
 			await asyncio.sleep(delay=3)
 			return False
 
@@ -149,6 +153,7 @@ class Claimer:
 			else: return False
 		except Exception as error:
 			logger.error(f"{self.session_name} | Unknown error when Claiming: {error}")
+			self.errors += 1
 			await asyncio.sleep(delay=3)
 			return False
 			
@@ -168,6 +173,7 @@ class Claimer:
 			else: return True
 		except Exception as error:
 			logger.error(f"{self.session_name} | Unknown error when Start Farming: {error}")
+			self.errors += 1
 			await asyncio.sleep(delay=3)
 			return False
 
@@ -230,6 +236,9 @@ class Claimer:
 			
 			self.authorized = False
 			while True:
+				if self.errors >= settings.ERRORS_BEFORE_STOP:
+					logger.error(f"{self.session_name} | Too many errors. Bot stopped.")
+					break
 				try:
 					if not self.authorized:
 						tg_web_data = await self.get_tg_web_data(proxy=proxy)
