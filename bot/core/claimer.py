@@ -186,7 +186,6 @@ class Claimer:
 			logger.error(f"{self.session_name} | Proxy: {proxy} | Error: {error}")
 
 	async def check_daily_grant(self, start_time: int | None, cur_time: int, day: int | None) -> tuple[bool, int]:
-		return False, 0 # it's temporary
 		if start_time is None and day is None:
 			logger.info(f"{self.session_name} | First daily grant available")
 			return True, 0
@@ -253,14 +252,16 @@ class Claimer:
 						else: continue
 					
 					if time() - access_token_created_time >= 3600:
-						refresh_success = await self.refresh_token()
-						if refresh_success:
-							self.http_client.headers['Authorization'] = 'Bearer ' + self.access_token
-							headers['Authorization'] = 'Bearer ' + self.access_token
-							access_token_created_time = time()
-						else:
-							self.authorized = False
-							continue
+						self.authorized = False
+						continue
+						#refresh_success = await self.refresh_token()
+						#if refresh_success:
+						#	self.http_client.headers['Authorization'] = 'Bearer ' + self.access_token
+						#	headers['Authorization'] = 'Bearer ' + self.access_token
+						#	access_token_created_time = time()
+						#else:
+						#	self.authorized = False
+						#	continue
 
 					profile = await self.get_profile()
 					info = profile['info']
@@ -283,12 +284,14 @@ class Claimer:
 					if daily_grant_awail:
 						if await self.daily_grant():
 							logger.success(f"{self.session_name} | Daily grant claimed.")
+							self.errors = 0
 						continue
 						
 					if status == 'await':
 						logger.info(f"{self.session_name} | Farm not active. Starting farming.")
 						if await self.start_farming():
 							logger.success(f"{self.session_name} | Farming started successfully.")
+							self.errors = 0
 						continue
 					else:
 						time_elapsed = system_time - start_time
@@ -305,13 +308,16 @@ class Claimer:
 								minutes = (claim_wait % 3600) // 60
 								logger.info(f"{self.session_name} | Farming active. Waiting for {hours} hours and {minutes} minutes before claiming and restarting.")
 								await asyncio.sleep(claim_wait)
+								continue
 						
 						logger.info(f"{self.session_name} | Time to claim and restart farming.")
 						taps = await self.calculate_taps(farm=farm, boost=boost)
 						if await self.send_claim(taps=taps):
 							logger.success(f"{self.session_name} | Claim successful.")
+							self.errors = 0
 						if await self.start_farming():
 							logger.success(f"{self.session_name} | Farming restarted successfully.")
+							self.errors = 0
 
 					# Log current balance
 					logger.info(f"{self.session_name} | Balance: {self.balance}")
