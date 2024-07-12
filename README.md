@@ -9,7 +9,9 @@
 |----------------------------------------------------------------|:----------:|
 | Multithreading                                                 |     ✅     |
 | Binding a proxy to a session                                   |     ✅     |
-| Auto-claim daily grant                                         |     ✅     |
+| Claim daily grant                                              |     ✅     |
+| Claim reward for friends                                       |     ✅     |
+| Claim reward for tasks                                         |     ✅     |
 | Automatic farming                                              |     ✅     |
 | Automatic taps that account for enabled boosts                 |     ✅     |
 | Docker                                                         |     ✅     |
