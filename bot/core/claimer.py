@@ -198,6 +198,44 @@ class Claimer:
 			await asyncio.sleep(delay=3)
 			return False
 
+	async def perform_tasks(self) -> None:
+		url = self.api_url + '/task-list'
+		try:
+			json_data = {}
+			data_list = []
+			json_data["hash"] = await self.create_hash(data_list)
+			await self.http_client.options(url)
+			response = await self.http_client.post(url, json=json_data)
+			response.raise_for_status()
+			response_json = await response.json()
+			completed = 0
+			for task in response_json:
+				if completed == 2: break # perform a maximum of 2 tasks in a row
+				if task['type'] == 'tonkeeper_wallet': continue # ignore task with connecting Tonkeeper wallet
+				if 'telegram' in task['type'] or 'telegram' in task['name'].lower():
+					continue # ignore all Telegram tasks (they are verified on the server side)
+				if task['status'] == 'possible':
+					logger.info(f"{self.session_name} | Try to perform task {task['id']}")
+					await asyncio.sleep(random.randint(4, 8))
+					json_data2 = {"id":task['id']}
+					data_list2 = [json_data2]
+					json_data2['hash'] = await self.create_hash(data_list2)
+					response2 = await self.http_client.post(f"{url}/complete", json=json_data2)
+					response2.raise_for_status()
+					response_json2 = await response2.json()
+					status = response_json2.get('task', {}).get('status', False)
+					if status == 'granted':
+						logger.success(f"{self.session_name} | Task {task['id']} completed. Reward claimed.")
+						await asyncio.sleep(random.randint(2, 4))
+						completed += 1
+						self.errors = 0
+					else:
+						logger.info(f"{self.session_name} | Failed to perform task {task['id']}")
+		except Exception as error:
+			logger.error(f"{self.session_name} | Unknown error while Performing tasks: {error}")
+			self.errors += 1
+			await asyncio.sleep(delay=3)
+	
 	async def check_proxy(self, proxy: Proxy) -> None:
 		try:
 			response = await self.http_client.get(url='https://httpbin.org/ip', timeout=aiohttp.ClientTimeout(5))
@@ -293,7 +331,7 @@ class Claimer:
 					self.balance = profile['balance']
 					day_grant_first = profile.get('day_grant_first', None)
 					day_grant_day = profile.get('day_grant_day', None)
-					friend_claim = profile['friend_claim']
+					friend_claim = int(profile['friend_claim'])
 					session = profile['session']
 					status = session['status']
 					if status == 'inProgress':
@@ -307,13 +345,19 @@ class Claimer:
 						if await self.daily_grant():
 							logger.success(f"{self.session_name} | Daily grant claimed.")
 							self.errors = 0
-						continue
+							continue
 					
 					if friend_claim > 0:
 						logger.info(f"{self.session_name} | Friends reward available")
 						if await self.friends_claim():
 							logger.success(f"{self.session_name} | Friends reward claimed.")
 							self.errors = 0
+							continue
+					
+					await self.perform_tasks()
+					
+					# Log current balance
+					logger.info(f"{self.session_name} | Balance: {self.balance}")
 						
 					if status == 'await':
 						logger.info(f"{self.session_name} | Farm not active. Starting farming.")
