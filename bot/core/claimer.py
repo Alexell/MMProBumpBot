@@ -136,6 +136,27 @@ class Claimer:
 			await asyncio.sleep(delay=3)
 			return False
 
+	async def friends_claim(self) -> bool:
+		url = self.api_url + '/friends/claim'
+		try:
+			json_data = {}
+			data_list = []
+			json_data["hash"] = await self.create_hash(data_list)
+			await self.http_client.options(url, json=json_data)
+			response = await self.http_client.post(url)
+			response.raise_for_status()
+			response_json = await response.json()
+			balance = response_json.get('balance', False)
+			if balance is not False:
+				self.balance = int(balance)
+				return True
+			else: return False
+		except Exception as error:
+			logger.error(f"{self.session_name} | Unknown error when claiming friends reward: {error}")
+			self.errors += 1
+			await asyncio.sleep(delay=3)
+			return False
+
 	async def send_claim(self, taps: int) -> bool:
 		url = self.api_url + '/farming/finish'
 		try:
@@ -272,6 +293,7 @@ class Claimer:
 					self.balance = profile['balance']
 					day_grant_first = profile.get('day_grant_first', None)
 					day_grant_day = profile.get('day_grant_day', None)
+					friend_claim = profile['friend_claim']
 					session = profile['session']
 					status = session['status']
 					if status == 'inProgress':
@@ -286,6 +308,12 @@ class Claimer:
 							logger.success(f"{self.session_name} | Daily grant claimed.")
 							self.errors = 0
 						continue
+					
+					if friend_claim > 0:
+						logger.info(f"{self.session_name} | Friends reward available")
+						if await self.friends_claim():
+							logger.success(f"{self.session_name} | Friends reward claimed.")
+							self.errors = 0
 						
 					if status == 'await':
 						logger.info(f"{self.session_name} | Farm not active. Starting farming.")
