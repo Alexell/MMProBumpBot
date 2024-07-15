@@ -117,13 +117,20 @@ class Claimer:
 
 	async def daily_grant(self) -> bool:
 		url = self.api_url + '/grant-day/claim'
+		url_reset = self.api_url + '/grant-day/reset'
 		try:
 			json_data = {}
 			data_list = []
 			json_data["hash"] = await self.create_hash(data_list)
 			await self.http_client.options(url, json=json_data)
 			response = await self.http_client.post(url)
-			response.raise_for_status()
+			#response.raise_for_status()
+			if response.status == 400:
+				await self.http_client.options(url_reset)
+				await self.http_client.post(url_reset)
+				await asyncio.sleep(delay=2)
+				json_data["hash"] = await self.create_hash(data_list)
+				response = await self.http_client.post(url)
 			response_json = await response.json()
 			balance = response_json.get('balance', False)
 			if balance is not False:
