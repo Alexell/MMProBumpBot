@@ -151,7 +151,7 @@ class Claimer:
 			data_list = []
 			json_data["hash"] = await self.create_hash(data_list)
 			await self.http_client.options(url_friends, json=json_data)
-			response = await self.http_client.post(url)
+			response = await self.http_client.post(url_friends)
 			response.raise_for_status()
 			response_json = await response.json()
 			friend_claim = response_json.get('friend_claim', 0)
@@ -159,7 +159,7 @@ class Claimer:
 				logger.info(f"{self.session_name} | Friends reward available")
 				json_data["hash"] = await self.create_hash(data_list)
 				await self.http_client.options(url_claim, json=json_data)
-				response = await self.http_client.post(url)
+				response = await self.http_client.post(url_claim)
 				response.raise_for_status()
 				response_json = await response.json()
 				balance = response_json.get('balance', False)
