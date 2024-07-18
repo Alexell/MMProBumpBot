@@ -144,19 +144,31 @@ class Claimer:
 			return False
 
 	async def friends_claim(self) -> bool:
-		url = self.api_url + '/friends/claim'
+		url_friends = self.api_url + '/friends'
+		url_claim = self.api_url + '/friends/claim'
 		try:
 			json_data = {}
 			data_list = []
 			json_data["hash"] = await self.create_hash(data_list)
-			await self.http_client.options(url, json=json_data)
+			await self.http_client.options(url_friends, json=json_data)
 			response = await self.http_client.post(url)
 			response.raise_for_status()
 			response_json = await response.json()
-			balance = response_json.get('balance', False)
-			if balance is not False:
-				self.balance = int(balance)
-				return True
+			friend_claim = response_json.get('friend_claim', 0)
+			if friend_claim > 0:
+				logger.info(f"{self.session_name} | Friends reward available")
+				json_data["hash"] = await self.create_hash(data_list)
+				await self.http_client.options(url_claim, json=json_data)
+				response = await self.http_client.post(url)
+				response.raise_for_status()
+				response_json = await response.json()
+				balance = response_json.get('balance', False)
+				if balance is not False:
+					logger.success(f"{self.session_name} | Friends reward claimed")
+					self.balance = int(balance)
+					self.errors = 0
+					return True
+				else: return False
 			else: return False
 		except Exception as error:
 			logger.error(f"{self.session_name} | Unknown error when claiming friends reward: {error}")
@@ -338,7 +350,6 @@ class Claimer:
 					self.balance = profile['balance']
 					day_grant_first = profile.get('day_grant_first', None)
 					day_grant_day = profile.get('day_grant_day', None)
-					friend_claim = int(profile['friend_claim'])
 					session = profile['session']
 					status = session['status']
 					if status == 'inProgress':
@@ -354,13 +365,7 @@ class Claimer:
 							self.errors = 0
 							continue
 					
-					if friend_claim > 0:
-						logger.info(f"{self.session_name} | Friends reward available")
-						if await self.friends_claim():
-							logger.success(f"{self.session_name} | Friends reward claimed.")
-							self.errors = 0
-							continue
-					
+					await self.friends_claim()
 					await self.perform_tasks()
 					
 					# Log current balance
@@ -405,6 +410,7 @@ class Claimer:
 					raise error
 				except Exception as error:
 					logger.error(f"{self.session_name} | Unknown error: {error}")
+					self.errors += 1
 					await asyncio.sleep(delay=3)
 				else:
 					logger.info(f"Sleep 1 min")
