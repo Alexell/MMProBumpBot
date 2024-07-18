@@ -154,7 +154,7 @@ class Claimer:
 			response = await self.http_client.post(url_friends)
 			response.raise_for_status()
 			response_json = await response.json()
-			friend_claim = response_json.get('friend_claim', 0)
+			friend_claim = int(response_json.get('friend_claim', 0))
 			if friend_claim > 0:
 				logger.info(f"{self.session_name} | Friends reward available")
 				json_data["hash"] = await self.create_hash(data_list)
