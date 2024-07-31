@@ -230,6 +230,7 @@ class Claimer:
 			completed = 0
 			for task in response_json:
 				if completed == 2: break # perform a maximum of 2 tasks in a row
+				if int(task['is_active']) == 0: continue
 				if task['type'] == 'tonkeeper_wallet': continue # ignore task with connecting Tonkeeper wallet
 				if '//t.me' in task['url']:
 					continue # ignore all Telegram tasks (they are verified on the server side)
