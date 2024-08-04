@@ -1,4 +1,4 @@
-# Bot for [MMPro Bump](https://alexell.ru/cc/mmpro)
+# Bot for [MMPro Bump](https://alexell.pro/cc/mmpro)
 
 ![img1](.github/images/demo.png)
 

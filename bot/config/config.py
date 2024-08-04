@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from bot.utils import logger
 
 
 class Settings(BaseSettings):
@@ -10,4 +11,8 @@ class Settings(BaseSettings):
 	USE_PROXY_FROM_FILE: bool = False
 
 
-settings = Settings()
+try:
+	settings = Settings()
+except Exception as error:
+	logger.error(error)
+	settings = False

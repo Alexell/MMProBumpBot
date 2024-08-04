@@ -53,9 +53,6 @@ async def get_tg_clients() -> list[Client]:
 	if not session_names:
 		raise FileNotFoundError("Not found session files")
 
-	if not settings.API_ID or not settings.API_HASH:
-		raise ValueError("API_ID and API_HASH not found in the .env file.")
-
 	tg_clients = [Client(
 		name=session_name,
 		api_id=settings.API_ID,
@@ -68,6 +65,9 @@ async def get_tg_clients() -> list[Client]:
 
 
 async def process() -> None:
+	if not settings:
+		logger.warning(f"Please fix the above errors in the .env file")
+		return
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-a', '--action', type=int, help='Action to perform')
 

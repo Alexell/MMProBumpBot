@@ -1,4 +1,4 @@
-# Бот для [MMPro Bump](https://alexell.ru/cc/mmpro)
+# Бот для [MMPro Bump](https://alexell.pro/cc/mmpro)
 
 ![img1](.github/images/demo.png)
 
