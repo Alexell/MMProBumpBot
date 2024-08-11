@@ -3,6 +3,7 @@ import glob
 import asyncio
 import argparse
 from itertools import cycle
+from pathlib import Path
 
 from pyrogram import Client
 from better_proxy import Proxy
@@ -31,21 +32,19 @@ Select an action:
 
 
 def get_session_names() -> list[str]:
-	session_names = glob.glob('sessions/*.session')
-	session_names = [os.path.splitext(os.path.basename(file))[0] for file in session_names]
-
+	session_path = Path('sessions')
+	session_files = session_path.glob('*.session')
+	session_names = sorted([file.stem for file in session_files])
 	return session_names
-
 
 def get_proxies() -> list[Proxy]:
 	if settings.USE_PROXY_FROM_FILE:
 		with open(file='bot/config/proxies.txt', encoding='utf-8-sig') as file:
-			proxies = [Proxy.from_str(proxy=row.strip()).as_url for row in file]
+			proxies = sorted([Proxy.from_str(proxy=row.strip()).as_url for row in file if row.strip()])
 	else:
 		proxies = []
 
 	return proxies
-
 
 async def get_tg_clients() -> list[Client]:
 	session_names = get_session_names()
