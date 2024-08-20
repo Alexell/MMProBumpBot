@@ -20,6 +20,7 @@
 | Option                  | Description                                                                |
 |-------------------------|----------------------------------------------------------------------------|
 | **API_ID / API_HASH**   | Platform data from which to launch a Telegram session (stock - Android)    |
+| **SLEEP_BETWEEN_START** | Sleep before start each session (e.g. [20, 360])                           |
 | **ERRORS_BEFORE_STOP**  | The number of failed requests after which the bot will stop                |
 | **USE_PROXY_FROM_FILE** | Whether to use proxy from the `bot/config/proxies.txt` file (True / False) |
 

@@ -2,6 +2,7 @@ import os
 import glob
 import asyncio
 import argparse
+import random
 from itertools import cycle
 from pathlib import Path
 
@@ -62,6 +63,24 @@ async def get_tg_clients() -> list[Client]:
 
 	return tg_clients
 
+async def run_bot_with_delay(tg_client, proxy, delay):
+	if delay > 0:
+		log.info(f"{tg_client.name} | Wait {delay} seconds before start")
+		await asyncio.sleep(delay)
+	await run_claimer(tg_client=tg_client, proxy=proxy)
+
+async def run_clients(tg_clients: list[Client]):
+	proxies = get_proxies()
+	proxies_cycle = cycle(proxies) if proxies else cycle([None])
+	tasks = []
+	delay = 0
+	for index, tg_client in enumerate(tg_clients):
+		if index > 0:
+			delay = random.randint(*settings.SLEEP_BETWEEN_START)
+		proxy = next(proxies_cycle)
+		task = asyncio.create_task(run_bot_with_delay(tg_client=tg_client, proxy=proxy, delay=delay))
+		tasks.append(task)
+	await asyncio.gather(*tasks)
 
 async def process() -> None:
 	if not settings:
@@ -93,13 +112,4 @@ async def process() -> None:
 	elif action == 2:
 		tg_clients = await get_tg_clients()
 
-		await run_tasks(tg_clients=tg_clients)
-
-
-async def run_tasks(tg_clients: list[Client]):
-	proxies = get_proxies()
-	proxies_cycle = cycle(proxies) if proxies else None
-	tasks = [asyncio.create_task(run_claimer(tg_client=tg_client, proxy=next(proxies_cycle) if proxies_cycle else None))
-			 for tg_client in tg_clients]
-
-	await asyncio.gather(*tasks)
+		await run_clients(tg_clients=tg_clients)

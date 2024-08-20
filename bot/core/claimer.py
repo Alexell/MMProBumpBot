@@ -366,7 +366,10 @@ class Claimer:
 							self.errors = 0
 							continue
 					
+					await asyncio.sleep(random.randint(2, 4))
 					await self.friends_claim()
+					
+					await asyncio.sleep(random.randint(2, 4))
 					await self.perform_tasks()
 					
 					# Log current balance
