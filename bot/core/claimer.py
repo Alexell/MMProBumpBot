@@ -122,8 +122,8 @@ class Claimer:
 			json_data = {}
 			data_list = []
 			json_data["hash"] = await self.create_hash(data_list)
-			await self.http_client.options(url, json=json_data)
-			response = await self.http_client.post(url)
+			await self.http_client.options(url)
+			response = await self.http_client.post(url, json=json_data)
 			#response.raise_for_status()
 			if response.status == 400:
 				await self.http_client.options(url_reset)
@@ -147,19 +147,21 @@ class Claimer:
 		url_friends = self.api_url + '/friends'
 		url_claim = self.api_url + '/friends/claim'
 		try:
-			json_data = {}
-			data_list = []
+			json_data = {'offset': 0, 'limit': 20}
+			data_list = [json_data]
 			json_data["hash"] = await self.create_hash(data_list)
-			await self.http_client.options(url_friends, json=json_data)
-			response = await self.http_client.post(url_friends)
+			await self.http_client.options(url_friends)
+			response = await self.http_client.post(url_friends, json=json_data)
 			response.raise_for_status()
 			response_json = await response.json()
 			friend_claim = int(response_json.get('friend_claim', 0))
 			if friend_claim > 0:
 				logger.info(f"{self.session_name} | Friends reward available")
+				json_data = {}
+				data_list = []
 				json_data["hash"] = await self.create_hash(data_list)
-				await self.http_client.options(url_claim, json=json_data)
-				response = await self.http_client.post(url_claim)
+				await self.http_client.options(url_claim)
+				response = await self.http_client.post(url_claim, json=json_data)
 				response.raise_for_status()
 				response_json = await response.json()
 				balance = response_json.get('balance', False)
