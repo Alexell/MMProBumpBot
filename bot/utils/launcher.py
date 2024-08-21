@@ -65,7 +65,7 @@ async def get_tg_clients() -> list[Client]:
 
 async def run_bot_with_delay(tg_client, proxy, delay):
 	if delay > 0:
-		log.info(f"{tg_client.name} | Wait {delay} seconds before start")
+		logger.info(f"{tg_client.name} | Wait {delay} seconds before start")
 		await asyncio.sleep(delay)
 	await run_claimer(tg_client=tg_client, proxy=proxy)
 
