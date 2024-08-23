@@ -177,24 +177,26 @@ class Claimer:
 			response_json = json.loads(response_text)
 			friend_claim = int(response_json.get('friend_claim', 0))
 			if friend_claim > 0:
+				await asyncio.sleep(delay=2)
 				logger.info(f"{self.session_name} | Friends reward available")
 				json_data = {}
 				data_list = []
 				json_data['hash'] = await self.create_hash(data_list)
 				await self.http_client.options(url_claim)
 				response = await self.http_client.post(url_claim, json=json_data)
-				response.raise_for_status()
-				response_text = await response.text()
-				if settings.DEBUG_MODE:
-					print(f"Friends claim response:\n{response_text}")
-				if self.isValidJson(response_text):
-					response_json = json.loads(response_text)
-					balance = response_json.get('balance', False)
-					if balance is not False:
-						logger.success(f"{self.session_name} | Friends reward claimed")
-						self.balance = int(balance)
-						self.errors = 0
-						return True
+				#response.raise_for_status()
+				if response.status == 200: # Sometimes server errors occur
+					response_text = await response.text()
+					if settings.DEBUG_MODE:
+						print(f"Friends claim response:\n{response_text}")
+					if self.isValidJson(response_text):
+						response_json = json.loads(response_text)
+						balance = response_json.get('balance', False)
+						if balance is not False:
+							logger.success(f"{self.session_name} | Friends reward claimed")
+							self.balance = int(balance)
+							self.errors = 0
+							return True
 				return False
 			else: return False
 		except Exception as error:
