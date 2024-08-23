@@ -78,7 +78,7 @@ class Claimer:
 			response.raise_for_status()
 			response_text = await response.text()
 			if settings.DEBUG_MODE:
-				logger.debug(f"{self.session_name} | Login response:\n{response_text}")
+				print(f"Login response:\n{response_text}")
 			response_json = json.loads(response_text)
 			token = response_json.get('access_token', '')
 			return token
@@ -96,7 +96,7 @@ class Claimer:
 			response.raise_for_status()
 			response_text = await response.text()
 			if settings.DEBUG_MODE:
-				logger.debug(f"{self.session_name} | Refresh auth tokens response:\n{response_text}")
+				print(f"Refresh auth tokens response:\n{response_text}")
 			response_json = json.loads(response_text)
 			self.access_token = response_json.get('access', '')
 			return True if self.access_token != '' else False
@@ -113,7 +113,7 @@ class Claimer:
 			response.raise_for_status()
 			response_text = await response.text()
 			if settings.DEBUG_MODE:
-				logger.debug(f"{self.session_name} | Profile Data response:\n{response_text}")
+				print(f"Profile Data response:\n{response_text}")
 			response_json = json.loads(response_text)
 			return response_json
 		except Exception as error:
@@ -140,7 +140,7 @@ class Claimer:
 				response = await self.http_client.post(url)
 			response_text = await response.text()
 			if settings.DEBUG_MODE:
-				logger.debug(f"{self.session_name} | Daily grant response:\n{response_text}")
+				print(f"Daily grant response:\n{response_text}")
 			response_json = json.loads(response_text)
 			balance = response_json.get('balance', False)
 			if balance is not False:
@@ -165,7 +165,7 @@ class Claimer:
 			response.raise_for_status()
 			response_text = await response.text()
 			if settings.DEBUG_MODE:
-				logger.debug(f"{self.session_name} | Frineds response:\n{response_text}")
+				print(f"Friends response:\n{response_text}")
 			response_json = json.loads(response_text)
 			friend_claim = int(response_json.get('friend_claim', 0))
 			if friend_claim > 0:
@@ -178,7 +178,7 @@ class Claimer:
 				response.raise_for_status()
 				response_text = await response.text()
 				if settings.DEBUG_MODE:
-					logger.debug(f"{self.session_name} | Friends claim response:\n{response_text}")
+					print(f"Friends claim response:\n{response_text}")
 				response_json = json.loads(response_text)
 				balance = response_json.get('balance', False)
 				if balance is not False:
@@ -205,7 +205,7 @@ class Claimer:
 			response.raise_for_status()
 			response_text = await response.text()
 			if settings.DEBUG_MODE:
-				logger.debug(f"{self.session_name} | Claiming response:\n{response_text}")
+				print(f"Claiming response:\n{response_text}")
 			response_json = json.loads(response_text)
 			balance = response_json.get('balance', False)
 			if balance is not False:
@@ -230,7 +230,7 @@ class Claimer:
 			response.raise_for_status()
 			response_text = await response.text()
 			if settings.DEBUG_MODE:
-				logger.debug(f"{self.session_name} | Login response:\n{response_text}")
+				print(f"Login response:\n{response_text}")
 			response_json = json.loads(response_text)
 			status = response_json.get('status', False)
 			if status is False: return False
@@ -252,7 +252,7 @@ class Claimer:
 			response.raise_for_status()
 			response_text = await response.text()
 			if settings.DEBUG_MODE:
-				logger.debug(f"{self.session_name} | Tasks response:\n{response_text}")
+				print(f"Tasks response:\n{response_text}")
 			response_json = json.loads(response_text)
 			completed = 0
 			for task in response_json:
@@ -271,7 +271,7 @@ class Claimer:
 					response2.raise_for_status()
 					response_text2 = await response2.text()
 					if settings.DEBUG_MODE:
-						logger.debug(f"{self.session_name} | Complete task response:\n{response_text2}")
+						print(f"Complete task response:\n{response_text2}")
 					response_json2 = json.loads(response_text2)
 					status = response_json2.get('task', {}).get('status', False)
 					if status == 'granted':
