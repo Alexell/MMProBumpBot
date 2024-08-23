@@ -79,9 +79,11 @@ class Claimer:
 			response_text = await response.text()
 			if settings.DEBUG_MODE:
 				print(f"Login response:\n{response_text}")
-			response_json = json.loads(response_text)
-			token = response_json.get('access_token', '')
-			return token
+			if self.isValidJson(response_text):
+				response_json = json.loads(response_text)
+				token = response_json.get('access_token', '')
+				return token
+			return False
 		except Exception as error:
 			logger.error(f"{self.session_name} | Unknown error when log in: {error}" + (f"\nTraceback: {traceback.format_exc()}" if settings.DEBUG_MODE else ""))
 			self.errors += 1
@@ -97,9 +99,11 @@ class Claimer:
 			response_text = await response.text()
 			if settings.DEBUG_MODE:
 				print(f"Refresh auth tokens response:\n{response_text}")
-			response_json = json.loads(response_text)
-			self.access_token = response_json.get('access', '')
-			return True if self.access_token != '' else False
+			if self.isValidJson(response_text):
+				response_json = json.loads(response_text)
+				self.access_token = response_json.get('access', '')
+				return True if self.access_token != '' else False
+			return False
 		except Exception as error:
 			logger.error(f"{self.session_name} | Unknown error when Refresh auth tokens: {error}" + (f"\nTraceback: {traceback.format_exc()}" if settings.DEBUG_MODE else ""))
 			await asyncio.sleep(delay=3)
@@ -114,8 +118,10 @@ class Claimer:
 			response_text = await response.text()
 			if settings.DEBUG_MODE:
 				print(f"Profile Data response:\n{response_text}")
-			response_json = json.loads(response_text)
-			return response_json
+			if self.isValidJson(response_text):
+				response_json = json.loads(response_text)
+				return response_json
+			return False
 		except Exception as error:
 			logger.error(f"{self.session_name} | Unknown error when getting Profile Data: {error}" + (f"\nTraceback: {traceback.format_exc()}" if settings.DEBUG_MODE else ""))
 			self.errors += 1
@@ -141,12 +147,13 @@ class Claimer:
 			response_text = await response.text()
 			if settings.DEBUG_MODE:
 				print(f"Daily grant response:\n{response_text}")
-			response_json = json.loads(response_text)
-			balance = response_json.get('balance', False)
-			if balance is not False:
-				self.balance = int(balance)
-				return True
-			else: return False
+			if self.isValidJson(response_text):
+				response_json = json.loads(response_text)
+				balance = response_json.get('balance', False)
+				if balance is not False:
+					self.balance = int(balance)
+					return True
+			return False
 		except Exception as error:
 			logger.error(f"{self.session_name} | Unknown error when getting daily grant: {error}" + (f"\nTraceback: {traceback.format_exc()}" if settings.DEBUG_MODE else ""))
 			self.errors += 1
@@ -166,6 +173,7 @@ class Claimer:
 			response_text = await response.text()
 			if settings.DEBUG_MODE:
 				print(f"Friends response:\n{response_text}")
+			if not self.isValidJson(response_text): return False
 			response_json = json.loads(response_text)
 			friend_claim = int(response_json.get('friend_claim', 0))
 			if friend_claim > 0:
@@ -179,14 +187,15 @@ class Claimer:
 				response_text = await response.text()
 				if settings.DEBUG_MODE:
 					print(f"Friends claim response:\n{response_text}")
-				response_json = json.loads(response_text)
-				balance = response_json.get('balance', False)
-				if balance is not False:
-					logger.success(f"{self.session_name} | Friends reward claimed")
-					self.balance = int(balance)
-					self.errors = 0
-					return True
-				else: return False
+				if self.isValidJson(response_text):
+					response_json = json.loads(response_text)
+					balance = response_json.get('balance', False)
+					if balance is not False:
+						logger.success(f"{self.session_name} | Friends reward claimed")
+						self.balance = int(balance)
+						self.errors = 0
+						return True
+				return False
 			else: return False
 		except Exception as error:
 			logger.error(f"{self.session_name} | Unknown error when claiming friends reward: {error}" + (f"\nTraceback: {traceback.format_exc()}" if settings.DEBUG_MODE else ""))
@@ -206,12 +215,13 @@ class Claimer:
 			response_text = await response.text()
 			if settings.DEBUG_MODE:
 				print(f"Claiming response:\n{response_text}")
-			response_json = json.loads(response_text)
-			balance = response_json.get('balance', False)
-			if balance is not False:
-				self.balance = int(balance)
-				return True
-			else: return False
+			if self.isValidJson(response_text):
+				response_json = json.loads(response_text)
+				balance = response_json.get('balance', False)
+				if balance is not False:
+					self.balance = int(balance)
+					return True
+			return False
 		except Exception as error:
 			logger.error(f"{self.session_name} | Unknown error when Claiming: {error}" + (f"\nTraceback: {traceback.format_exc()}" if settings.DEBUG_MODE else ""))
 			self.errors += 1
@@ -231,10 +241,12 @@ class Claimer:
 			response_text = await response.text()
 			if settings.DEBUG_MODE:
 				print(f"Login response:\n{response_text}")
-			response_json = json.loads(response_text)
-			status = response_json.get('status', False)
-			if status is False: return False
-			else: return True
+			if self.isValidJson(response_text):
+				response_json = json.loads(response_text)
+				status = response_json.get('status', False)
+				if status is False: return False
+				else: return True
+			return False
 		except Exception as error:
 			logger.error(f"{self.session_name} | Unknown error when Start Farming: {error}" + (f"\nTraceback: {traceback.format_exc()}" if settings.DEBUG_MODE else ""))
 			self.errors += 1
@@ -253,6 +265,7 @@ class Claimer:
 			response_text = await response.text()
 			if settings.DEBUG_MODE:
 				print(f"Tasks response:\n{response_text}")
+			if not self.isValidJson(response_text): return
 			response_json = json.loads(response_text)
 			completed = 0
 			for task in response_json:
@@ -273,15 +286,16 @@ class Claimer:
 					response_text2 = await response2.text()
 					if settings.DEBUG_MODE:
 						print(f"Complete task response:\n{response_text2}")
-					response_json2 = json.loads(response_text2)
-					status = response_json2.get('task', {}).get('status', False)
-					if status == 'granted':
-						logger.success(f"{self.session_name} | Task {task['id']} completed. Reward claimed.")
-						await asyncio.sleep(random.randint(2, 4))
-						completed += 1
-						self.errors = 0
-					else:
-						logger.info(f"{self.session_name} | Failed to perform task {task['id']}")
+					if self.isValidJson(response_text2):
+						response_json2 = json.loads(response_text2)
+						status = response_json2.get('task', {}).get('status', False)
+						if status == 'granted':
+							logger.success(f"{self.session_name} | Task {task['id']} completed. Reward claimed.")
+							await asyncio.sleep(random.randint(2, 4))
+							completed += 1
+							self.errors = 0
+						else:
+							logger.info(f"{self.session_name} | Failed to perform task {task['id']}")
 		except Exception as error:
 			logger.error(f"{self.session_name} | Unknown error while Performing tasks: {error}" + (f"\nTraceback: {traceback.format_exc()}" if settings.DEBUG_MODE else ""))
 			self.errors += 1
@@ -334,6 +348,13 @@ class Claimer:
 			complete_str = time_param
 		hashed = hmac.new(secret_key.encode(), complete_str.encode(), hashlib.sha256)
 		return hashed.hexdigest()
+
+	def isValidJson(self, text: str) -> bool:
+		try:
+			json.loads(response_text)
+			return True
+		except ValueError:
+			return False
 
 	async def run(self, proxy: str | None) -> None:
 		access_token_created_time = 0
