@@ -1,9 +1,7 @@
-import asyncio
+import asyncio, aiohttp, random, math, hashlib, hmac, json, traceback
 from time import time, strftime, localtime
 from urllib.parse import quote, unquote
 from typing import Any, Dict, List
-
-import aiohttp, random, math, hashlib, hmac
 from aiohttp_proxy import ProxyConnector
 from better_proxy import Proxy
 from pyrogram import Client
@@ -68,7 +66,7 @@ class Claimer:
 			raise error
 
 		except Exception as error:
-			logger.error(f"{self.session_name} | Unknown error during Authorization: {error}")
+			logger.error(f"{self.session_name} | Unknown error during Authorization: {error}" + (f"\nTraceback: {traceback.format_exc()}" if settings.DEBUG_MODE else ""))
 			await asyncio.sleep(delay=3)
 
 	async def login(self, init_data: str) -> str:
@@ -78,11 +76,14 @@ class Claimer:
 			json_data = {"initData": init_data}
 			response = await self.http_client.post(url, json=json_data)
 			response.raise_for_status()
-			response_json = await response.json()
+			response_text = await response.text()
+			if settings.DEBUG_MODE:
+				logger.debug(f"{self.session_name} | Login response:\n{response_text}")
+			response_json = json.loads(response_text)
 			token = response_json.get('access_token', '')
 			return token
 		except Exception as error:
-			logger.error(f"{self.session_name} | Unknown error when log in: {error}")
+			logger.error(f"{self.session_name} | Unknown error when log in: {error}" + (f"\nTraceback: {traceback.format_exc()}" if settings.DEBUG_MODE else ""))
 			self.errors += 1
 			await asyncio.sleep(delay=3)
 			return False
@@ -93,11 +94,14 @@ class Claimer:
 			await self.http_client.options(url)
 			response = await self.http_client.post(url)
 			response.raise_for_status()
-			response_json = await response.json()
+			response_text = await response.text()
+			if settings.DEBUG_MODE:
+				logger.debug(f"{self.session_name} | Refresh auth tokens response:\n{response_text}")
+			response_json = json.loads(response_text)
 			self.access_token = response_json.get('access', '')
 			return True if self.access_token != '' else False
 		except Exception as error:
-			logger.error(f"{self.session_name} | Unknown error when Refresh auth tokens: {error}")
+			logger.error(f"{self.session_name} | Unknown error when Refresh auth tokens: {error}" + (f"\nTraceback: {traceback.format_exc()}" if settings.DEBUG_MODE else ""))
 			await asyncio.sleep(delay=3)
 			return False
 
@@ -107,10 +111,13 @@ class Claimer:
 			await self.http_client.options(url)
 			response = await self.http_client.post(url)
 			response.raise_for_status()
-			response_json = await response.json()
+			response_text = await response.text()
+			if settings.DEBUG_MODE:
+				logger.debug(f"{self.session_name} | Profile Data response:\n{response_text}")
+			response_json = json.loads(response_text)
 			return response_json
 		except Exception as error:
-			logger.error(f"{self.session_name} | Unknown error when getting Profile Data: {error}")
+			logger.error(f"{self.session_name} | Unknown error when getting Profile Data: {error}" + (f"\nTraceback: {traceback.format_exc()}" if settings.DEBUG_MODE else ""))
 			self.errors += 1
 			await asyncio.sleep(delay=3)
 			return {}
@@ -121,7 +128,7 @@ class Claimer:
 		try:
 			json_data = {}
 			data_list = []
-			json_data["hash"] = await self.create_hash(data_list)
+			json_data['hash'] = await self.create_hash(data_list)
 			await self.http_client.options(url)
 			response = await self.http_client.post(url, json=json_data)
 			#response.raise_for_status()
@@ -129,16 +136,19 @@ class Claimer:
 				await self.http_client.options(url_reset)
 				await self.http_client.post(url_reset)
 				await asyncio.sleep(delay=2)
-				json_data["hash"] = await self.create_hash(data_list)
+				json_data['hash'] = await self.create_hash(data_list)
 				response = await self.http_client.post(url)
-			response_json = await response.json()
+			response_text = await response.text()
+			if settings.DEBUG_MODE:
+				logger.debug(f"{self.session_name} | Daily grant response:\n{response_text}")
+			response_json = json.loads(response_text)
 			balance = response_json.get('balance', False)
 			if balance is not False:
 				self.balance = int(balance)
 				return True
 			else: return False
 		except Exception as error:
-			logger.error(f"{self.session_name} | Unknown error when getting daily grant: {error}")
+			logger.error(f"{self.session_name} | Unknown error when getting daily grant: {error}" + (f"\nTraceback: {traceback.format_exc()}" if settings.DEBUG_MODE else ""))
 			self.errors += 1
 			await asyncio.sleep(delay=3)
 			return False
@@ -149,21 +159,27 @@ class Claimer:
 		try:
 			json_data = {'offset': 0, 'limit': 20}
 			data_list = [json_data]
-			json_data["hash"] = await self.create_hash(data_list)
+			json_data['hash'] = await self.create_hash(data_list)
 			await self.http_client.options(url_friends)
 			response = await self.http_client.post(url_friends, json=json_data)
 			response.raise_for_status()
-			response_json = await response.json()
+			response_text = await response.text()
+			if settings.DEBUG_MODE:
+				logger.debug(f"{self.session_name} | Frineds response:\n{response_text}")
+			response_json = json.loads(response_text)
 			friend_claim = int(response_json.get('friend_claim', 0))
 			if friend_claim > 0:
 				logger.info(f"{self.session_name} | Friends reward available")
 				json_data = {}
 				data_list = []
-				json_data["hash"] = await self.create_hash(data_list)
+				json_data['hash'] = await self.create_hash(data_list)
 				await self.http_client.options(url_claim)
 				response = await self.http_client.post(url_claim, json=json_data)
 				response.raise_for_status()
-				response_json = await response.json()
+				response_text = await response.text()
+				if settings.DEBUG_MODE:
+					logger.debug(f"{self.session_name} | Friends claim response:\n{response_text}")
+				response_json = json.loads(response_text)
 				balance = response_json.get('balance', False)
 				if balance is not False:
 					logger.success(f"{self.session_name} | Friends reward claimed")
@@ -173,7 +189,7 @@ class Claimer:
 				else: return False
 			else: return False
 		except Exception as error:
-			logger.error(f"{self.session_name} | Unknown error when claiming friends reward: {error}")
+			logger.error(f"{self.session_name} | Unknown error when claiming friends reward: {error}" + (f"\nTraceback: {traceback.format_exc()}" if settings.DEBUG_MODE else ""))
 			self.errors += 1
 			await asyncio.sleep(delay=3)
 			return False
@@ -183,18 +199,21 @@ class Claimer:
 		try:
 			json_data = {"tapCount":taps}
 			data_list = [json_data]
-			json_data["hash"] = await self.create_hash(data_list)
+			json_data['hash'] = await self.create_hash(data_list)
 			await self.http_client.options(url)
 			response = await self.http_client.post(url, json=json_data)
 			response.raise_for_status()
-			response_json = await response.json()
+			response_text = await response.text()
+			if settings.DEBUG_MODE:
+				logger.debug(f"{self.session_name} | Claiming response:\n{response_text}")
+			response_json = json.loads(response_text)
 			balance = response_json.get('balance', False)
 			if balance is not False:
 				self.balance = int(balance)
 				return True
 			else: return False
 		except Exception as error:
-			logger.error(f"{self.session_name} | Unknown error when Claiming: {error}")
+			logger.error(f"{self.session_name} | Unknown error when Claiming: {error}" + (f"\nTraceback: {traceback.format_exc()}" if settings.DEBUG_MODE else ""))
 			self.errors += 1
 			await asyncio.sleep(delay=3)
 			return False
@@ -205,16 +224,19 @@ class Claimer:
 		try:
 			json_data = {"status":"inProgress"}
 			data_list = [json_data]
-			json_data["hash"] = await self.create_hash(data_list)
+			json_data['hash'] = await self.create_hash(data_list)
 			await self.http_client.options(url)
 			response = await self.http_client.post(url, json=json_data)
 			response.raise_for_status()
-			response_json = await response.json()
+			response_text = await response.text()
+			if settings.DEBUG_MODE:
+				logger.debug(f"{self.session_name} | Login response:\n{response_text}")
+			response_json = json.loads(response_text)
 			status = response_json.get('status', False)
 			if status is False: return False
 			else: return True
 		except Exception as error:
-			logger.error(f"{self.session_name} | Unknown error when Start Farming: {error}")
+			logger.error(f"{self.session_name} | Unknown error when Start Farming: {error}" + (f"\nTraceback: {traceback.format_exc()}" if settings.DEBUG_MODE else ""))
 			self.errors += 1
 			await asyncio.sleep(delay=3)
 			return False
@@ -224,11 +246,14 @@ class Claimer:
 		try:
 			json_data = {}
 			data_list = []
-			json_data["hash"] = await self.create_hash(data_list)
+			json_data['hash'] = await self.create_hash(data_list)
 			await self.http_client.options(url)
 			response = await self.http_client.post(url, json=json_data)
 			response.raise_for_status()
-			response_json = await response.json()
+			response_text = await response.text()
+			if settings.DEBUG_MODE:
+				logger.debug(f"{self.session_name} | Tasks response:\n{response_text}")
+			response_json = json.loads(response_text)
 			completed = 0
 			for task in response_json:
 				if completed == 2: break # perform a maximum of 2 tasks in a row
@@ -244,7 +269,10 @@ class Claimer:
 					json_data2['hash'] = await self.create_hash(data_list2)
 					response2 = await self.http_client.post(f"{url}/complete", json=json_data2)
 					response2.raise_for_status()
-					response_json2 = await response2.json()
+					response_text2 = await response2.text()
+					if settings.DEBUG_MODE:
+						logger.debug(f"{self.session_name} | Complete task response:\n{response_text2}")
+					response_json2 = json.loads(response_text2)
 					status = response_json2.get('task', {}).get('status', False)
 					if status == 'granted':
 						logger.success(f"{self.session_name} | Task {task['id']} completed. Reward claimed.")
@@ -254,7 +282,7 @@ class Claimer:
 					else:
 						logger.info(f"{self.session_name} | Failed to perform task {task['id']}")
 		except Exception as error:
-			logger.error(f"{self.session_name} | Unknown error while Performing tasks: {error}")
+			logger.error(f"{self.session_name} | Unknown error while Performing tasks: {error}" + (f"\nTraceback: {traceback.format_exc()}" if settings.DEBUG_MODE else ""))
 			self.errors += 1
 			await asyncio.sleep(delay=3)
 	
@@ -415,7 +443,7 @@ class Claimer:
 				except InvalidSession as error:
 					raise error
 				except Exception as error:
-					logger.error(f"{self.session_name} | Unknown error: {error}")
+					logger.error(f"{self.session_name} | Unknown error: {error}" + (f"\nTraceback: {traceback.format_exc()}" if settings.DEBUG_MODE else ""))
 					self.errors += 1
 					await asyncio.sleep(delay=3)
 				else:
