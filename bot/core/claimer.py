@@ -296,7 +296,7 @@ class Claimer:
 			logger.error(f"{self.session_name} | Proxy: {proxy} | Error: {error}")
 
 	async def check_daily_grant(self, start_time: int | None, cur_time: int, day: int | None) -> tuple[bool, int]:
-		if start_time is None and day is None:
+		if start_time is None or day is None:
 			logger.info(f"{self.session_name} | First daily grant available")
 			return True, 0
 		
