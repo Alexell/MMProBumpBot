@@ -351,7 +351,7 @@ class Claimer:
 
 	def isValidJson(self, text: str) -> bool:
 		try:
-			json.loads(response_text)
+			json.loads(text)
 			return True
 		except ValueError:
 			return False
