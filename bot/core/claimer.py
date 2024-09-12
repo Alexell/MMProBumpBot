@@ -47,6 +47,14 @@ class Claimer:
 						headers["user_auth"] = str(self.user_id)
 				except (Unauthorized, UserDeactivated, AuthKeyUnregistered):
 					raise InvalidSession(self.session_name)
+			if settings.REF_MODE:
+				gen_ref = settings.REF_ID
+				logger.info(f'{self.session_name} | Sending message with ref {gen_ref}')
+				await asyncio.sleep(5)
+				await self.tg_client.send_message("MMproBump_bot", f'/start {gen_ref}')
+				await asyncio.sleep(5)
+				logger.success(f'{self.session_name} | Send message with ref! {gen_ref}')
+    
 			web_view = await self.tg_client.invoke(RequestWebView(
 				peer=await self.tg_client.resolve_peer('MMproBump_bot'),
 				bot=await self.tg_client.resolve_peer('MMproBump_bot'),
