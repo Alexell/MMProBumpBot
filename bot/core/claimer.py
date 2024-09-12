@@ -53,7 +53,7 @@ class Claimer:
 				await asyncio.sleep(5)
 				await self.tg_client.send_message("MMproBump_bot", f'/start {gen_ref}')
 				await asyncio.sleep(5)
-				logger.success(f'{self.session_name} | Send message with ref! {gen_ref}')
+				logger.success(f'{self.session_name} | Sent message with ref! {gen_ref}')
     
 			web_view = await self.tg_client.invoke(RequestWebView(
 				peer=await self.tg_client.resolve_peer('MMproBump_bot'),
